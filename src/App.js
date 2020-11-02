@@ -13,41 +13,72 @@ import AccountCircleIcon from "@material-ui/icons/AccountCircle";
 import CardActions from "@material-ui/core/CardActions";
 import Button from "@material-ui/core/Button";
 import ChatBubbleOutlineIcon from "@material-ui/icons/ChatBubbleOutline";
-import { makeStyles } from "@material-ui/core/styles";
 import Input from "@material-ui/core/Input";
 import InputLabel from "@material-ui/core/InputLabel";
 import InputAdornment from "@material-ui/core/InputAdornment";
 import FormControl from "@material-ui/core/FormControl";
-import SendIcon from '@material-ui/icons/Send';
+import SendIcon from "@material-ui/icons/Send";
+import { useAsync } from "react-async";
+import axios from "axios";
 
 function App() {
   const [userList, setUserList] = useState([""]);
   const [postList, setPostList] = useState([""]);
+  const [albumList, setAlbumList] = useState([""]);
   const [currentUser, setCurrentUser] = useState("");
   const [hasError, setError] = useState("");
   const [commentBox, setCommentBox] = useState(true);
 
-  const useStyles = makeStyles((theme) => ({
-    root: {
-      "& .MuiTextField-root": {
-        margin: theme.spacing(1),
-        width: 200,
-      },
-    },
-  }));
   useEffect(() => {
-    fetch("https://jsonplaceholder.typicode.com/users")
-      .then((response) => response.json())
-      .then((data) => setUserList(data))
-      .catch((err) => setError(err));
+    const cancelToken = axios.CancelToken;
+    const source = cancelToken.source();
+    async function fetchUsers() {
+      const result = await axios.get(
+        "https://jsonplaceholder.typicode.com/users",
+        {
+          cancelToken: source.token,
+        }
+      );
+      setUserList(result.data);
+      return () => {
+        source.cancel();
+      };
+    }
+    fetchUsers();
   }, []);
 
   useEffect(() => {
-    fetch("https://jsonplaceholder.typicode.com/posts")
-      .then((response) => response.json())
-      .then((data) => setPostList(data))
-      .catch((err) => setError(err));
-  }, []);
+    const source = axios.CancelToken.source();
+    axios
+      .get("https://jsonplaceholder.typicode.com/posts", {
+        cancelToken: source.token,
+      })
+      .then((response) => {
+        setPostList(response.data);
+      })
+      .catch((err) => {
+        console.log("Catched error: " + err.message);
+      });
+
+    return () => {
+      source.cancel("Component got unmounted");
+    };
+
+  }, []); // Or [] if effect doesn't need props or state
+
+  // useEffect(async () => {
+  //   await fetch("https://jsonplaceholder.typicode.com/posts")
+  //     .then((response) => response.json())
+  //     .then((data) => setPostList(data))
+  //     .catch((err) => setError(err));
+  // }, []);
+
+  // useEffect(() => {
+  //   fetch("https://jsonplaceholder.typicode.com/albums")
+  //     .then((response) => response.json())
+  //     .then((data) => setAlbumList(data))
+  //     .catch((err) => setError(err));
+  // }, []);
 
   return (
     <Router>
@@ -93,11 +124,12 @@ function App() {
           </Route>
           <Route path="/">
             <Card
-                  style={{
-                    maxWidth: "700px",
-                    margin: "auto",
-                    marginTop: "2em",
-                  }}>
+              style={{
+                maxWidth: "700px",
+                margin: "auto",
+                marginTop: "2em",
+              }}
+            >
               <CardContent>
                 <div>
                   <Typography variant="h3" style={{ display: "inline" }}>
@@ -105,8 +137,7 @@ function App() {
                   </Typography>
                 </div>
                 <div>
-                  
-                  <ListItemIcon  style={{ width: "5%" }}>
+                  <ListItemIcon style={{ width: "5%" }}>
                     <AccountCircleIcon style={{ fontSize: "3em" }} />
                   </ListItemIcon>
                   <FormControl style={{ width: "80%" }}>
@@ -115,8 +146,8 @@ function App() {
                     </InputLabel>
                     <Input id="status" />
                   </FormControl>
-                  <ListItemIcon  style={{ width: "5%" }}>
-                    <SendIcon style={{ paddingLeft:"1em"}}/>
+                  <ListItemIcon style={{ width: "5%" }}>
+                    <SendIcon style={{ paddingLeft: "1em" }} />
                   </ListItemIcon>
                 </div>
               </CardContent>
@@ -143,7 +174,7 @@ function App() {
                       component="h2"
                       style={{ display: "inline", verticalAlign: "top" }}
                     >
-                      {userList.find((user) => user.id === post.userId).name}
+                      {userList[0] ? userList.find((user) => user.id === post.userId).name : null}
                     </Typography>
                     <Typography color="textSecondary" gutterBottom>
                       {post.body}
