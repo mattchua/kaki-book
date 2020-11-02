@@ -18,8 +18,8 @@ import InputLabel from "@material-ui/core/InputLabel";
 import InputAdornment from "@material-ui/core/InputAdornment";
 import FormControl from "@material-ui/core/FormControl";
 import SendIcon from "@material-ui/icons/Send";
-import { useAsync } from "react-async";
 import axios from "axios";
+import PhotoLibraryIcon from '@material-ui/icons/PhotoLibrary';
 
 function App() {
   const [userList, setUserList] = useState([""]);
@@ -63,7 +63,6 @@ function App() {
     return () => {
       source.cancel("Component got unmounted");
     };
-
   }, []); // Or [] if effect doesn't need props or state
 
   // useEffect(async () => {
@@ -73,12 +72,23 @@ function App() {
   //     .catch((err) => setError(err));
   // }, []);
 
-  // useEffect(() => {
-  //   fetch("https://jsonplaceholder.typicode.com/albums")
-  //     .then((response) => response.json())
-  //     .then((data) => setAlbumList(data))
-  //     .catch((err) => setError(err));
-  // }, []);
+  useEffect(() => {
+    const source = axios.CancelToken.source();
+    axios
+      .get("https://jsonplaceholder.typicode.com/albums", {
+        cancelToken: source.token,
+      })
+      .then((response) => {
+        setAlbumList(response.data);
+      })
+      .catch((err) => {
+        console.log("Catched error: " + err.message);
+      });
+
+    return () => {
+      source.cancel("Component got unmounted");
+    };
+  }, []); // Or [] if effect doesn't need props or state
 
   return (
     <Router>
@@ -117,8 +127,26 @@ function App() {
                 <h2>{currentUser.name}</h2>
                 <h5>{currentUser.username}</h5>
                 <div>{currentUser.email}</div>
-                <div>{currentUser.phone}</div>
-                <a href={currentUser.website}>{currentUser.website}</a>
+                <div>
+                  {currentUser.phone}{" "}
+                  <a href={currentUser.website}>{currentUser.website}</a>
+                </div>
+                <List>
+                  {albumList[0]
+                    ? albumList
+                        .filter((album) => album.userId === currentUser.id)
+                        .map((album, index) => (
+                          <ListItem
+                            style={{ width: "33.3%", display: "inline-block" }}
+                          >
+                            <ListItemIcon>
+                              <PhotoLibraryIcon/>
+                            </ListItemIcon>
+                            <h5>{album.title}</h5>
+                          </ListItem>
+                        ))
+                    : null}
+                </List>
               </div>
             </div>
           </Route>
@@ -174,7 +202,9 @@ function App() {
                       component="h2"
                       style={{ display: "inline", verticalAlign: "top" }}
                     >
-                      {userList[0] ? userList.find((user) => user.id === post.userId).name : null}
+                      {userList[0]
+                        ? userList.find((user) => user.id === post.userId).name
+                        : null}
                     </Typography>
                     <Typography color="textSecondary" gutterBottom>
                       {post.body}
