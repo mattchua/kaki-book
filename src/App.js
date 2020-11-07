@@ -15,19 +15,72 @@ import Button from "@material-ui/core/Button";
 import ChatBubbleOutlineIcon from "@material-ui/icons/ChatBubbleOutline";
 import Input from "@material-ui/core/Input";
 import InputLabel from "@material-ui/core/InputLabel";
-import InputAdornment from "@material-ui/core/InputAdornment";
 import FormControl from "@material-ui/core/FormControl";
 import SendIcon from "@material-ui/icons/Send";
 import axios from "axios";
-import PhotoLibraryIcon from '@material-ui/icons/PhotoLibrary';
+import PhotoLibraryIcon from "@material-ui/icons/PhotoLibrary";
+import ArrowBackIcon from "@material-ui/icons/ArrowBack";
+import TextField from "@material-ui/core/TextField";
 
 function App() {
   const [userList, setUserList] = useState([""]);
+  const [posts, setPosts] = useState([""]);
   const [postList, setPostList] = useState([""]);
   const [albumList, setAlbumList] = useState([""]);
+  const [photoList, setPhotoList] = useState([""]);
   const [currentUser, setCurrentUser] = useState("");
-  const [hasError, setError] = useState("");
   const [commentBox, setCommentBox] = useState(true);
+  const [commentList, setCommentList] = useState([""]);
+  const [isBottom, setIsBottom] = useState(false);
+
+  //Infinite scroll
+  useEffect(() => {
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  function handleScroll() {
+    const scrollTop =
+      (document.documentElement && document.documentElement.scrollTop) ||
+      document.body.scrollTop;
+    const scrollHeight =
+      (document.documentElement && document.documentElement.scrollHeight) ||
+      document.body.scrollHeight;
+    if (scrollTop + window.innerHeight + 50 >= scrollHeight) {
+      setIsBottom(true);
+    }
+  }
+
+  useEffect(() => {
+    if (isBottom) {
+      addItems();
+    }
+  }, [isBottom]);
+
+  function addItems() {
+    console.log("Adding items");
+    setPostList(Array.from(posts).slice(0, postList.length + 10));
+    setIsBottom(false)
+  }
+
+  const openAlbum = (albumId) => {
+    const cancelToken = axios.CancelToken;
+    const source = cancelToken.source();
+    async function fetchPhotos() {
+      const result = await axios.get(
+        "https://jsonplaceholder.typicode.com/photos?albumId=" + albumId,
+        {
+          cancelToken: source.token,
+        }
+      );
+      setPhotoList(result.data);
+      return () => {
+        source.cancel();
+      };
+    }
+    fetchPhotos();
+    console.log(photoList);
+  };
 
   useEffect(() => {
     const cancelToken = axios.CancelToken;
@@ -54,7 +107,9 @@ function App() {
         cancelToken: source.token,
       })
       .then((response) => {
-        setPostList(response.data);
+        setPosts(response.data);
+        console.log(posts);
+        setPostList(Array.from(response.data).slice(0, 10));
       })
       .catch((err) => {
         console.log("Catched error: " + err.message);
@@ -65,7 +120,28 @@ function App() {
     };
   }, []); // Or [] if effect doesn't need props or state
 
-  // useEffect(async () => {
+  useEffect(() => {
+    const cancelToken = axios.CancelToken;
+    const source = cancelToken.source();
+    async function fetchComments() {
+      const result = await axios.get(
+        "https://jsonplaceholder.typicode.com/comments",
+        {
+          cancelToken: source.token,
+        }
+      );
+      setCommentList(result.data);
+      console.log(commentList);
+      return () => {
+        source.cancel();
+      };
+    }
+    fetchComments();
+  }, []);
+
+  const scrollHeight =
+    (document.documentElement && document.documentElement.scrollHeight) ||
+    document.body.scrollHeight; // useEffect(async () => {
   //   await fetch("https://jsonplaceholder.typicode.com/posts")
   //     .then((response) => response.json())
   //     .then((data) => setPostList(data))
@@ -100,30 +176,31 @@ function App() {
             renders the first one that matches the current URL. */}
         <Switch>
           <Route path="/users">
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "20% 80%",
-                gridTemplateRows: "auto 10%",
-              }}
-            >
-              <List component="nav" aria-label="main mailbox folders">
-                {userList.map((user, index) => (
-                  <ListItem
-                    key={index}
-                    button
-                    onClick={() => setCurrentUser(user)}
-                  >
-                    <ListItemIcon>
-                      <AccountCircleIcon fontSize="large" />
-                    </ListItemIcon>
-                    <ListItemText primary={user.name} secondary={user.email} />
-                  </ListItem>
-                ))}
-              </List>
+            <div className="users">
+              <div className="userList">
+                <List component="nav" aria-label="main mailbox folders">
+                  {userList.map((user, index) => (
+                    <ListItem
+                      key={index}
+                      button
+                      onClick={() => (setCurrentUser(user), setPhotoList([""]))}
+                    >
+                      <ListItemIcon>
+                        <AccountCircleIcon fontSize="large" />
+                      </ListItemIcon>
+                      <ListItemText
+                        primary={user.name}
+                        secondary={user.email}
+                      />
+                    </ListItem>
+                  ))}
+                </List>
+              </div>
 
               <div hidden={!currentUser} className="info">
-                <img style={{ height: "150px", width: "150px" }} src=""></img>
+                <ListItemIcon>
+                  <AccountCircleIcon style={{ fontSize: "10em" }} />
+                </ListItemIcon>
                 <h2>{currentUser.name}</h2>
                 <h5>{currentUser.username}</h5>
                 <div>{currentUser.email}</div>
@@ -131,22 +208,54 @@ function App() {
                   {currentUser.phone}{" "}
                   <a href={currentUser.website}>{currentUser.website}</a>
                 </div>
-                <List>
-                  {albumList[0]
+                <div className="userAlbums">
+                  {albumList[0] && !photoList[0]
                     ? albumList
                         .filter((album) => album.userId === currentUser.id)
                         .map((album, index) => (
-                          <ListItem
-                            style={{ width: "33.3%", display: "inline-block" }}
+                          <div
+                            key={album.id + index}
+                            onClick={() => openAlbum(album.id)}
+                            className="photoAlbum"
                           >
-                            <ListItemIcon>
-                              <PhotoLibraryIcon/>
+                            <ListItemIcon style={{ minWidth: "0" }}>
+                              <PhotoLibraryIcon style={{ fontSize: "3em" }} />
                             </ListItemIcon>
-                            <h5>{album.title}</h5>
-                          </ListItem>
+                            <h5
+                              style={{
+                                textOverflow: "hidden",
+                                maxHeight: "3em",
+                              }}
+                            >
+                              {album.title}
+                            </h5>
+                          </div>
                         ))
                     : null}
-                </List>
+                </div>
+                <div
+                  style={{ margin: "2em", float: "left" }}
+                  hidden={!photoList}
+                >
+                  <ListItemIcon style={{ float: "left" }}>
+                    <ArrowBackIcon
+                      style={{ cursor: "pointer" }}
+                      onClick={() => setPhotoList([""])}
+                    />
+                  </ListItemIcon>
+                  <div style={{ margin: "2em", float: "left" }}>
+                    {photoList.map((photo, index) => (
+                      <div
+                        key={index}
+                        style={{ display: "inline", float: "left" }}
+                      >
+                        <a href={photo.url}>
+                          <img src={photo.thumbnailUrl}></img>
+                        </a>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
           </Route>
@@ -180,51 +289,77 @@ function App() {
                 </div>
               </CardContent>
             </Card>
-            {postList
-              .filter((post) => post.id < 11)
-              .map((post, index) => (
-                <Card
-                  key={index}
-                  style={{
-                    maxWidth: "500px",
-                    margin: "auto",
-                    marginTop: "2em",
-                  }}
-                >
-                  <CardContent>
-                    <ListItemIcon style={{ display: "inline" }}>
-                      <AccountCircleIcon
-                        style={{ fontSize: "2em", paddingRight: "0.3em" }}
-                      />
-                    </ListItemIcon>
-                    <Typography
-                      variant="h5"
-                      component="h2"
-                      style={{ display: "inline", verticalAlign: "top" }}
+            {postList[0]
+              ? postList
+                  .filter((post) => post.id === post.id)
+                  .map((post, index) => (
+                    <Card
+                      key={index}
+                      style={{
+                        maxWidth: "500px",
+                        margin: "auto",
+                        marginTop: "2em",
+                      }}
                     >
-                      {userList[0]
-                        ? userList.find((user) => user.id === post.userId).name
-                        : null}
-                    </Typography>
-                    <Typography color="textSecondary" gutterBottom>
-                      {post.body}
-                    </Typography>
-                  </CardContent>
-                  <CardActions>
-                    <Button size="small">
-                      <ListItemIcon style={{ minWidth: "0px", padding: "2px" }}>
-                        <ChatBubbleOutlineIcon />
-                      </ListItemIcon>
-                      <Typography
-                        onClick={() => setCommentBox(!commentBox)}
-                        style={{ textTransform: "initial" }}
-                      >
-                        Comment
-                      </Typography>
-                    </Button>
-                  </CardActions>
-                </Card>
-              ))}
+                      <CardContent>
+                        <ListItemIcon style={{ display: "inline" }}>
+                          <AccountCircleIcon
+                            style={{ fontSize: "2em", paddingRight: "0.3em" }}
+                          />
+                        </ListItemIcon>
+                        <Typography
+                          variant="h5"
+                          component="h2"
+                          style={{ display: "inline", verticalAlign: "top" }}
+                        >
+                          {userList[0]
+                            ? userList.find((user) => user.id === post.userId)
+                                .name
+                            : null}
+                        </Typography>
+                        <Typography gutterBottom>{post.body}</Typography>
+                        <Typography variant="body1">Comments</Typography>
+                        <List>
+                          {commentList
+                            ? commentList
+                                .filter((comm) => comm.postId === post.id)
+                                .map((comment, index) => (
+                                  <div
+                                    style={{ left: "100px" }}
+                                    key={comment.id}
+                                  >
+                                    <Typography variant="subtitle2">
+                                      {comment.name}
+                                    </Typography>
+                                    <Typography variant="caption">
+                                      {comment.body}
+                                    </Typography>
+                                  </div>
+                                ))
+                            : null}
+                        </List>
+                      </CardContent>
+                      <CardActions>
+                        <Button size="small">
+                          <ListItemIcon
+                            style={{ minWidth: "0px", padding: "2px" }}
+                          >
+                            <ChatBubbleOutlineIcon />
+                          </ListItemIcon>
+                          <Typography
+                            onClick={() => setCommentBox(!commentBox)}
+                            style={{ textTransform: "initial" }}
+                          >
+                            Comment
+                          </Typography>
+                        </Button>
+                      </CardActions>
+                      <form>
+                        <TextField id={"standard-basic" + post.id} label="" />
+                      </form>
+                    </Card>
+                  ))
+              : null}
           </Route>
         </Switch>
       </div>

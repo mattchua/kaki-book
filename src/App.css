@@ -1,43 +1,83 @@
-.userList{
+.users {
+  display: -ms-grid;
+  display: grid;
+  -ms-grid-columns: 20% 80%;
+  -ms-grid-rows: 100%;
+  height: 100%;
+
+  grid-template-columns: 20% 80%;
+  grid-template-rows: auto 10%;
+}
+
+.userList {
   list-style: none;
+  -ms-grid-column: 1;
+  grid-column: 1;
+  -ms-grid-row: 1;
+  grid-row: 1;
   grid-column-start: 1;
   grid-column-end: 2;
   grid-row-start: 1;
   grid-row-end: 2;
 }
 
-
-
-.user :hover{
+.user :hover {
   background-color: rgb(243, 243, 243);
   border-right: none;
 }
 
-ul li a{
+ul li a {
   border-bottom: 1px solid rgb(189, 187, 187);
-  border-right: 1px solid rgb(189, 187, 187);;
+  border-right: 1px solid rgb(189, 187, 187);
   display: inline-block;
 }
 
-.info{
+.info {
   margin-top: 1em;
-  grid-column-start: 2; 
+  -ms-grid-column: 2;
+  -ms-grid-row: 1;
+  grid-column: 2;
+  grid-row: 1;
+  grid-column-start: 2;
   grid-column-end: 3;
   grid-row-start: 1;
   grid-row-end: 2;
   text-align: center;
 }
 
-.topNav{
+.topNav {
   background-color: #333;
   overflow: hidden;
 }
 
-.topNav a{
+.topNav a {
   float: left;
   color: #f2f2f2;
   text-align: center;
   padding: 14px 16px;
   text-decoration: none;
   font-size: 17px;
+}
+
+.userProfileIcon {
+  font-size: 10em;
+}
+
+.userAlbums {
+  /* float: left; */
+  align-items: left;
+}
+
+.photoAlbum {
+  cursor: pointer;
+  width: 30vh;
+  height: 30vh;
+  display: inline-table;
+  /* border: 1px solid rgb(95, 95, 95); */
+  border-radius: 15px;
+  border-style: ridge;
+  padding: 10px;
+  margin: 1%;
+  text-overflow: ellipsis;
+  -ms-text-overflow: ellipsis;
 }
